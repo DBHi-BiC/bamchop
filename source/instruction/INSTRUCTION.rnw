@@ -1,0 +1,164 @@
+<<load-up,echo=FALSE,results=hide>>=
+program.name<-'bamchop';
+author<-'Zhe Zhang';
+affiliation<-'Center for Biomedical Informatics at CHOP';
+@
+
+\documentclass{article}
+
+%headers and footers
+\usepackage{fancyhdr}
+\usepackage{array}
+\pagestyle{fancyplain}
+
+\usepackage{sidecap}
+\usepackage{subfigure}
+\usepackage{float}
+\usepackage{longtable}
+\usepackage{colortbl}
+\usepackage{setspace}
+
+\fancyhfoffset[LE, LO, RE, RO]{.1in}
+
+\rhead{$\Sexpr{program.name}$}
+\chead{}
+\lhead{}
+
+\lfoot{\includegraphics[width=0.1\textwidth]{../../logo.jpg} {\bfseries \Sexpr{affiliation}}}
+\cfoot{}
+\rfoot{\fancyplain{}{\thepage}}
+
+\renewcommand{\footrulewidth}{0.4pt}
+
+\addtolength{\oddsidemargin}{-1in}
+\addtolength{\evensidemargin}{-1in}
+\addtolength{\textwidth}{2in}
+\addtolength{\topmargin}{-0.5in}
+\addtolength{\textheight}{1in}
+
+%hyperlink setup
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{underscore}
+\usepackage{appendix}
+\definecolor{dark-red}{rgb}{0.4,0.15,0.15}
+\definecolor{dark-blue}{rgb}{0.15,0.15,0.4}
+\definecolor{medium-blue}{rgb}{0,0,0.5}
+\hypersetup{
+    colorlinks, linkcolor={dark-red},
+    citecolor={dark-blue}, urlcolor={medium-blue}
+}
+
+\setlength{\headheight}{15pt}
+\setlength{\parindent}{0pt} 
+\setlength{\parskip}{1ex}
+\setlength{\tabcolsep}{10pt}
+\setlength{\extrarowheight}{1.5pt}
+
+\begin{document}
+\begin{titlepage}
+\title{An introduction to \textit{\Sexpr{program.name}}}
+\author{\Sexpr{author}}
+\maketitle
+\tableofcontents
+\end{titlepage}
+
+\section{Installation}
+
+\textit{\Sexpr{program.name}} is based upon \textbf{Sweave} (\url{http://en.wikipedia.org/wiki/Sweave}) framework, which is an intergration of \textbf{R} coding and \textbf{LaTeX} documenting. Therefore, \textit{\Sexpr{program.name}} requires the installation of:
+
+\begin{description}
+\item[LaTeX:] Download from \url{http://www.latex-project.org/ftp.html} and install it. The size of the full Mac distribution is about 1.8 GB. You can also use smaller version such as MacTeXtras from \url{http://mirror.ctan.org/systems/mac/mactex/MacTeXtras.zip}. 
+\item[R:] \textit{\Sexpr{program.name}} runs within R, so you need to download the newest version of R from \url{http://www.r-project.org} and install it. The basic functions of R are extended by thousands of packages and \textit{\Sexpr{program.name}} requires the following packages to run:
+  \begin{itemize}
+  \item \textbf{R.oo}
+  \item \textbf{gplots}
+  \item \textbf{plotrix}
+  \item \textbf{vcd}
+  \item \textbf{xtable}
+	\end{itemize}
+\item[Bioconductor:] Bioconductor is a project extending basic R with hundreds of bioinformatics-related packages. You can install the Bioconductor core packages within R. \textit{\Sexpr{program.name}}  for  to run, plus the following packages:
+  \begin{itemize}
+  \item \textbf{GenomicRanges}
+  \item \textbf{Rsamtools}
+  \item \textbf{seqLogo}
+  \item \textbf{BSgenome}
+  \item reference genome, such as \textbf{BSgenome.Hsapiens.UCSC.hg19} package if hg19 was used for alignment
+  \end{itemize}
+\end{description}
+
+\subsection{Install R packages within R}
+To install an R package within R:
+\begin{description}
+\item[] Install a specific R package, such as \textbf{vcd}:
+<<install1, eval=FALSE>>=
+install.packages('vcd', repos="http://lib.stat.cmu.edu/R/CRAN/");
+@
+
+\item[] Install Bioconductor core packages:
+<<install2, eval=FALSE>>=
+source("http://bioconductor.org/biocLite.R");
+biocLite();
+@
+
+\item[] Install a specific Bioconductor package, such as \textbf{Rsamtools}:
+<<install3, eval=FALSE>>=
+source("http://bioconductor.org/biocLite.R");
+biocLite("Rsamtools");
+@
+\end{description}
+Alternatively, you can download a package to local disk and install it using shell command \textbf{R CMD INSTALL}.
+
+
+\section{Prepare input files}
+Running \textit{\Sexpr{program.name}} requires two tab-delimited text files, respectively with information about:
+\begin{description}
+\item[BAM files:] this file should contain two columns with no header.
+\begin{itemize}
+  \item \textbf{Column 1: } unique names of BAM files. The names will be used as the folder names of output files.
+  \item \textbf{Column 2: } full path to BAM files.
+  \end{itemize}
+\item[Requencing targets:] this file should contain five columns with no header. 
+\begin{itemize}
+  \item \textbf{Column 1: } unique names of targeted regions.
+  \item \textbf{Column 2: } chromosome names of target regions. Try to use names consistent with those used in reference genome. Otherwise, the program will try to map chromosome names with its best guess.
+  \item \textbf{Column 3: } start position of target regions.
+  \item \textbf{Column 4: } end position of target regions.
+  \item \textbf{Column 5: } assign value 1 to all targets of interest (TOI) and 0 to all the other targets. \textit{\Sexpr{program.name}} will provide details about individual targets. However, reporting details about many targets will slow down the program and increase the size of ouput substantially. So, we suggest you to specify a subset of them as TOI when there are more than 144 total targets. The TOI can be selected randomly, by size, by importance, or any other criteria. 
+  \end{itemize}
+\end{description}
+
+\section{Set parameters}
+Open and edit the file \textbf{paste(program.name, '_param.r', sep='')} to set running parameters. There are three types of parameters:
+\begin{description}
+\item[Required parameters:] These parameters should be specified for each data set.
+\begin{itemize}
+  \item \textbf{bams} The full path and name of the tab-delimited text file with BAM file information (see section \textbf{Prepare input files}).
+  \item \textbf{targets} The full path and name of the tab-delimited text file with target information (see section \textbf{Prepare input files}).
+  \item \textbf{path.out} The fule path where all the output files will be stored.
+  \end{itemize}
+\item[Optional parameters:] Change the value of these parameters when necessary
+\begin{itemize}
+  \item \textbf{project.name}
+  \item \textbf{prepared.by} 
+  \item \textbf{affiliation} 
+  \item \textbf{genome.name} Name of the reference genome.
+  \item \textbf{logo} Name of the file with an image to be put in the footer with affiliation. Copy the file into the program folder if you want to use your own.
+  \end{itemize}
+  \item[Advanced parameters:] These are for experienced users only.  
+\end{description}
+
+\section{Run \Sexpr{program.name}}
+We are finally ready to run \textit{\Sexpr{program.name}} now. Copy the program folder to a location you prefer and start R within the folder; then use
+<<wd, eval=TRUE>>=
+getwd();
+@
+to make sure you in the right working directory; and run \textit{\Sexpr{program.name}} with
+<<run, eval=FALSE>>=
+source('bam2pdf.r');
+@
+The running will take a while. Wait patiently. 
+
+\section{Outputs}
+All output files will be saved to the folder specified by the \textbf{path.out} parameter. The minimal outputs are a set of pdf files, each with an individual figure, and a full report named \textbf{\Sexpr{paste(program.name, '.pdf', sep='')}}, within each subfolder. 
+\end{document}

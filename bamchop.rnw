@@ -1,0 +1,475 @@
+\documentclass{article}
+
+%headers and footers
+\usepackage{fancyhdr}
+\usepackage{array}
+\pagestyle{fancyplain}
+
+\usepackage{sidecap}
+\usepackage{subfigure}
+\usepackage{float}
+\usepackage{longtable}
+\usepackage{colortbl}
+\usepackage{setspace}
+
+\fancyhfoffset[LE, LO, RE, RO]{.1in}
+
+\rhead{$\Sexpr{sample.name}$}
+\chead{}
+\lhead{}
+
+\lfoot{\includegraphics[width=0.1\textwidth]{\Sexpr{logo}} {\bfseries \Sexpr{affiliation}}}
+\cfoot{}
+\rfoot{\fancyplain{}{\thepage}}
+
+\renewcommand{\footrulewidth}{0.4pt}
+
+\addtolength{\oddsidemargin}{-1in}
+\addtolength{\evensidemargin}{-1in}
+\addtolength{\textwidth}{2in}
+\addtolength{\topmargin}{-0.5in}
+\addtolength{\textheight}{1in}
+
+%hyperlink setup
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{underscore}
+\usepackage{appendix}
+\definecolor{dark-red}{rgb}{0.4,0.15,0.15}
+\definecolor{dark-blue}{rgb}{0.15,0.15,0.4}
+\definecolor{medium-blue}{rgb}{0,0,0.5}
+\hypersetup{
+    colorlinks, linkcolor={dark-red},
+    citecolor={dark-blue}, urlcolor={medium-blue}
+}
+
+\setlength{\headheight}{15pt}
+\setlength{\parindent}{0pt} 
+\setlength{\parskip}{1ex}
+\setlength{\tabcolsep}{10pt}
+\setlength{\extrarowheight}{1.5pt}
+
+\begin{document}
+\begin{titlepage}
+\title{\Sexpr{project.name}: \Sexpr{sample.name}}
+\author{Prepared by \Sexpr{prepared.by}}
+\maketitle
+\tableofcontents
+\end{titlepage}
+
+
+<<landscape, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=13, height=17>>=
+#####################################################################################################################
+#####################################################################################################################
+XY<-PlotLandscape(cov, roi=targets[toi], ws=landscape.ws, y.scale=landscape.type);
+#####################################################################################################################
+@
+
+\pagebreak
+\begin{center}
+\includegraphics[width=6.5in, height=8.5in]{bamchop-landscape}
+\end{center}
+\pagebreak
+
+
+\section{Whole Genome}
+\begin{SCtable}[1][h!]
+<<general-genome, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+t<-data.frame(nm=names(genome.stats$global), v=sapply(genome.stats$global, function(v) format(v, big.mark=',')));
+print(xtable(t, align='|r|r|r|'), floating=FALSE, include.rownames=FALSE, include.colnames=FALSE, hline.after=0:nrow(t));
+########################################################################################################################
+@
+\caption{\large{GENERAL DESCRIPTION}
+\newline
+\small{Effective genome size excludes assembly gaps.
+\newline
+Quality scores are assigned by resequencer to represent base calling confidence 
+\newline
+Mapping quality are assigned by alignment program to represent mapping confidence}}
+\end{SCtable}
+
+
+\subsection{BAM file}
+<<bam-info, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+info<-file.info(bam.file);
+file.loc<-paste(strsplit(bam.file, '/')[[1]], collapse=' > ');
+########################################################################################################################
+@
+\begin{description}
+\item[\large{Size:}] \Sexpr{round(info[[1]]/10^9,2)} GB
+\item[\large{Created:}] \Sexpr{info[[5]]}
+\item[\large{Modified:}] \Sexpr{info[[4]]}
+\item[\large{Location:}] \Sexpr{file.loc}
+\end{description}
+
+
+\subsection{Sequencing depth}
+<<genome-depth, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=12, height=8>>=
+########################################################################################################################
+########################################################################################################################
+Plot3DPie(genome.stats$depth.counts, main='Whole genome depth');
+########################################################################################################################
+@
+
+\begin{SCfigure}[1][h!]
+\includegraphics[width=4.5in, height=3in]{bamchop-genome-depth}
+\caption{\small{This plot shows the percentage of the whole genome whose depth is within a given range. Bases located within assembly gaps are excluded because their depth should always be 0.}}
+\end{SCfigure}
+
+\pagebreak
+\subsection{Sequencing quality}
+<<distribution-qual, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=6, height=5>>=
+########################################################################################################################
+########################################################################################################################
+PlotQualityDens(bg.stats$quality$density, main='Score distribution');
+########################################################################################################################
+@
+
+\begin{center}
+\begin{SCfigure}[1][h!]
+\includegraphics[width=3in, height=2.5in]{bamchop-distribution-qual}
+\caption{\small{The results in this plot are drawn from the <qual> field of BAM file and based upon \Sexpr{format(length(one.percent), scientific=FALSE, big.mark=',')} of \Sexpr{format(width(one.percent)[1], scientific=FALSE, big.mark=',')}bp, or \Sexpr{round(sum(width(one.percent))/10^6, 2)} million bp, randomly selected genomic regions, mapped by \Sexpr{format(bg.stats$counts[1], scientific=FALSE, big.mark=',')} reads. The quality scores are calculated by subtracting 33 after converting ASCII characters in BAM file to integers. If the convention of Sanger sequencing was followed, they are equal to Phred scores.}}
+\end{SCfigure}
+\end{center}
+
+<<position-qual, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=12, height=8>>=
+########################################################################################################################
+########################################################################################################################
+PlotQualityPerc(bg.stats$quality$percentiles, main='Position-specific quality');
+lines(bg.stats$quality$summary[, 'mean'], lwd=3, lty=2, col='#000000');
+########################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6in, height=4in, page=1]{bamchop-position-qual}
+\caption{\small{This plot shows the percentiles of quality scores at different positions within reads. Blue line represents the medians and dashed line is the means. Results are based on \Sexpr{format(bg.stats$counts[2], big.mark=',')} forward reads mapped to \Sexpr{round(sum(width(one.percent))/10^6, 2)} million bp of randomly selected reference genome.}}
+\end{figure}
+\end{center}
+
+\pagebreak
+\subsection{Mapping quality}
+<<mapq, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=13, height=6>>=
+########################################################################################################################
+########################################################################################################################
+mapq<-bg.stats$mapq;
+v<-100*mapq[mapq>0]/sum(mapq);
+PlotLogBar(v[order(as.numeric(names(v)))], 'Distribution of mapping scores', xlab='Mapping score');
+########################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6.5in, height=3in]{bamchop-mapq}
+\caption{\small{Mapping quality is assigned to each read by alignment program to indicate the uniqueness and fitness of the alignment. By definition, mapping quality equals to \Sexpr{-10}Log10(Prob. of incorrect mapping); however, its intepretation depends on individual programs. Lower scores usually suggest more mismatches AND/OR more genomic locations to be mapped to. The results in this plot are drawn from the <mapq> field of BAM file and based upon \Sexpr{round(sum(width(one.percent))/10^6, 2)} million bp randomly selected reference genome.}}
+\end{figure}
+\end{center}
+
+<<cigar, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=13, height=6>>=
+########################################################################################################################
+########################################################################################################################
+c<-bg.stats$cigar;
+v<-100*c[c>0]/bg.stats$counts[1];
+PlotLogBar(v, main='Frequency of CIGAR string tags', space=1.5, col='darkblue', las=1, xlab='');
+########################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6.5in, height=3in]{bamchop-cigar}
+\caption{\small{Percentages of reads including insertion, deletion or other tags in their CIGAR strings, based on randomly selected \Sexpr{round(sum(width(one.percent))/10^6, 2)} million bp of reference genome.}}
+\end{figure}
+\end{center}
+
+\subsection{Nucleic acid frequency}
+
+<<position-specific-freq-first, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=10, height=6>>=
+########################################################################################################################
+########################################################################################################################
+freq<-t(bg.stats$base$frequency[, 1:4])/(bg.stats$bases$total[1,1:4]/25); # normalize to expected frequency
+freq<-apply(freq, 2, function(x) x/sum(x)); 
+PlotBaseLogo(freq[,1:min(10, ncol(freq))], 'First 10 bases');
+@
+<<position-specific-freq-last, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=10, height=6>>=
+PlotBaseLogo(freq[,max(1, ncol(freq)-9):ncol(freq)], 'Last 10 bases');
+########################################################################################################################
+@
+\begin{center}
+\begin{figure}[H]
+\subfigure{\includegraphics[width=3.33in, height=2in, page=2]{bamchop-position-specific-freq-first} }
+\subfigure{\includegraphics[width=3.33in, height=2in, page=2]{bamchop-position-specific-freq-last} }
+\caption{\small{Position-specific frequency indicates the sequencing or alignment bias towards the first or last a few bases within reads. To generate this plot, base frequency has been normalized by the expected frequency in the reference genome, as the numbers in the table above. }}
+\end{figure}
+\end{center}
+
+
+<<di-base, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=8, height=8>>=
+########################################################################################################################
+########################################################################################################################
+par(mar=c(0,0,0,0));
+mosaic(bg.stats$bases$di.normalized, main='Frequency of two-base combinations');
+########################################################################################################################
+@
+
+\begin{center}
+\begin{SCfigure}[1][h!]
+\includegraphics[width=2.5in, height=2.5in]{bamchop-di-base}
+\caption{\small{This plot summarizes the frequency of the two-base combinations at the beginning of all reads. The size of the blocks represent their relative frequency after adjusted by their expected frequency within the randomly selected \Sexpr{round(sum(width(one.percent))/10^6, 2)} million bp of reference genome.}}
+\end{SCfigure}
+\end{center}
+
+\begin{SCtable}[1][h!]
+<<base-frequency, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+t<-data.frame(bg.stats$bases$total);
+print(xtable(t, align='|r|r|r|r|r|'), floating=FALSE, include.rownames=TRUE, include.colnames=TRUE, hline.after=-1:nrow(t));
+########################################################################################################################
+@
+\caption{\large{OVERALL FREQUENCY}
+\newline
+\small{Expected frequency is the actual base frequency within the random \Sexpr{round(sum(width(one.percent))/10^6, 2)} million bp. Observed frequency is the  frequency of bases within reads mapped to those regions. So, the ratio of the two reflects sequencing bias.}
+}
+\end{SCtable}
+
+
+\pagebreak
+\section{Targeted Regions}
+
+\begin{center}
+\begin{SCtable}[1][h!]
+<<targets-basic-statistics, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+t<-data.frame(nm=names(target.stats$basic), v=sapply(target.stats$basic, function(v) format(v, big.mark=',')));
+print(xtable(t, align='|r|r|r|'), floating=FALSE, include.rownames=FALSE, include.colnames=FALSE, hline.after=0:nrow(t));
+########################################################################################################################
+@
+
+\caption{\large{BASIC STATISTICS}
+\newline
+\small{Total on-target reads include ones partially mapped to the targets.
+\newline
+Targets out of the scope of BAM file are not included.
+}}
+\end{SCtable}
+\end{center}
+
+\subsection{Per base statistics}
+\subsubsection{Sequencing depth}
+<<targets-depth, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=12, height=8>>=
+########################################################################################################################
+########################################################################################################################
+Plot3DPie(target.stats$coverage$depth.counts, main='On-target depth');
+########################################################################################################################
+@
+
+\begin{SCfigure}[1][h!]
+\includegraphics[width=4.5in, height=3in]{bamchop-targets-depth}
+\caption{\small{This plot shows the average percentage of targeted regions whose depth is within a given range. Higher depth leads to higher confidence of SNP calling.  }}
+\end{SCfigure}
+
+<<cumulative-depth, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=12, height=7.2>>=
+########################################################################################################################
+########################################################################################################################
+PlotAccuDepth(target.stats$coverage$accu, main='Cumulative distribution');
+########################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6in, height=3.6in]{bamchop-cumulative-depth}
+\caption{\small{This plot serves a similar purpose, but in greater detail. It shows overall percentage of all targeted regions having depth greater than any given value.}}
+\end{figure}
+\end{center}
+
+<<center-vs-ends, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=12, height=6>>=
+#####################################################################################################################
+#####################################################################################################################
+PlotCenterEnd(target.stats$coverage$cen.end, main='Center vs. ends')
+#####################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6in, height=3in]{bamchop-center-vs-ends}
+\caption{\small{The ends of targeted regions often have lower depth than the center due to capture or alignment bias. This plot shows the relative depth of the ends comparing to the overall average. Each targeted region is split into 101 equal intervals to get the average depth of each interval. Means and standard errors of all regions are summarized here.}}
+\end{figure}
+\end{center}
+
+\subsubsection{Nucleic acid frequency}
+<<acgt-frequency, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=4.5, height=4.5>>=
+#####################################################################################################################
+#####################################################################################################################
+par(mfrow=c(1,1), mar=c(2,2,2,2));
+lab.frq<-paste(names(target.stats$summary$base), ', ', round(100*target.stats$summary$base/sum(target.stats$summary$base), 2), '%', sep='');
+pie(target.stats$summary$base, labels=lab.frq, radius=0.8, init.angle=90, clockwise=TRUE, col=c('#00FF00CC', '#0000FFCC', 'orange', '#FF0000CC', 'grey'));
+#####################################################################################################################
+@
+
+\begin{center}
+\begin{SCfigure}[1][h!]
+\includegraphics[width=3in, height=3in]{bamchop-acgt-frequency}
+\caption{\small{Observed overall nucleic acid frequency within all reads aligned to targeted regions}}
+\end{SCfigure}
+\end{center}
+
+\subsection{Per target statistics}
+\subsubsection{Depth}
+<<target-depth-min, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=6.75, height=6>>=
+#####################################################################################################################
+#####################################################################################################################
+PlotDensity(target.stats$stats$depth['Min.', ], main='Minimum depth', xlab='Depth (X)');
+@
+<<target-depth-mean, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=6.75, height=6>>=
+PlotDensity(target.stats$stats$depth['Mean', ], main='Average depth', xlab='Depth (X)');
+@
+<<target-depth-max, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=6.75, height=6>>=
+PlotDensity(target.stats$stats$depth['Max.', ], main='Maximum depth', xlab='Depth (X)');
+#####################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\subfigure{\includegraphics[width=2.25in, height=2in]{bamchop-target-depth-min}}
+\subfigure{\includegraphics[width=2.25in, height=2in]{bamchop-target-depth-mean}}
+\subfigure{\includegraphics[width=2.25in, height=2in]{bamchop-target-depth-max}}
+\caption{\small{The density distribution of minimum, average and maximum depth of all targets.}}
+\end{figure}
+\end{center}
+
+\subsubsection{Quality score}
+<<target-qual, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=10, height=7.5>>=
+#####################################################################################################################
+#####################################################################################################################
+PlotDensity(target.stats$stats$qual['Mean', ], main='Average sequencing quality', xlab='Quality score', col='#FF9090CC');
+@
+<<target-mapq, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=10, height=7.5>>=
+PlotDensity(target.stats$stats$mapq['Mean', ], main='Average mapping quality', xlab='Mapping score', col='#FF9090CC');
+#####################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\subfigure{\includegraphics[width=3.33in, height=2.5in]{bamchop-target-qual}}
+\subfigure{\includegraphics[width=3.33in, height=2.5in]{bamchop-target-mapq}}
+\caption{\small{The density distribution of average sequencing and mapping quality scores of all targets.}}
+\end{figure}
+\end{center}
+
+\subsubsection{Strand balance}
+<<target-strand, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=10, height=6>>=
+#####################################################################################################################
+#####################################################################################################################
+ct<-rowSums(target.stats$count[,1:2]);
+PlotDensity(100*target.stats$count[ct>0,1]/ct[ct>0], main='Forward read frequency', xlab='Percentage of forward reads', col='#9090FFCC');
+#####################################################################################################################
+@
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[width=5in, height=3in]{bamchop-target-strand}
+\caption{\small{The density distribution of the percentages of reads mapped to forward strand within all targeted regions.}}
+\end{center}
+\end{figure}
+
+\subsection{Targets of interest}
+\subsubsection{Depth}
+<<toi-depth, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=13, height=15>>=
+#####################################################################################################################
+#####################################################################################################################
+PlotStamps(target.stats$coverage$all[toi], type='polygon', col='grey')
+#####################################################################################################################
+@
+\begin{center}
+\includegraphics[width=6.5in, height=7.5in]{bamchop-toi-depth}
+\end{center}
+
+\subsubsection{Sequencing quality}
+<<toi-qual, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=13, height=16>>=
+#####################################################################################################################
+#####################################################################################################################
+PlotStamps(target.stats$qual[toi], type='density', col='grey');
+#####################################################################################################################
+@
+\begin{center}
+\includegraphics[width=6.5in, height=8in]{bamchop-toi-qual}
+\end{center}
+
+
+\subsubsection{Mapping quality}
+<<toi-mapq, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=13, height=16>>=
+#####################################################################################################################
+#####################################################################################################################
+PlotStamps(target.stats$mapq[toi], type='density', col='grey')
+#####################################################################################################################
+@
+\begin{center}
+\includegraphics[width=6.5in, height=8in]{bamchop-toi-mapq}
+\end{center}
+
+\subsubsection{Nucleic acid frequency}
+<<toi-base, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=13, height=16>>=
+#####################################################################################################################
+#####################################################################################################################
+PlotStamps(target.stats$base[toi, c('A', 'C', 'G', 'T', 'N')], type='pie', col=c('#00FF00CC', '#0000FFCC', 'orange', '#FF0000CC', 'grey'));
+#####################################################################################################################
+@
+\begin{center}
+\includegraphics[width=6.5in, height=8in]{bamchop-toi-base}
+\end{center}
+
+\subsubsection{Strand balance}
+<<toi-strand, include=FALSE, echo=FALSE, fig=TRUE, eval=TRUE, width=13, height=16>>=
+#####################################################################################################################
+#####################################################################################################################
+PlotStamps(target.stats$count[toi, 1:2], type='pie', col=c('#FF222288', '#22FF2288'));
+#####################################################################################################################
+@
+\begin{center}
+\includegraphics[width=6.5in, height=8in]{bamchop-toi-strand}
+\end{center}
+
+\subsubsection{Summary tables}
+<<tables, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+library(xtable);
+
+# target locations
+ind<-as.list(seq(1, length(toi), 2));
+seg<-as.data.frame(targets[toi])[, 1:4];
+names(seg)<-c('Chromosome', 'Start', 'End', 'Width');
+print(xtable(seg, caption='Location'), size='\\tiny', floating=FALSE, caption.placement="top", tabular.environment="longtable", add.to.row=list(as.list(seq(1, nrow(seg), 2)), rep("\\rowcolor[gray]{.9} ", length(seq(1, nrow(seg), 2)))));
+
+# Depth table
+c<-target.stats$coverage$all[toi];
+qs<-t(sapply(c, summary));
+n0<-sapply(c, function(c) length(c[c==0]));
+n1<-sapply(c, function(c) length(c[c<variant.call.cutoff]));
+qs<-cbind(n0, n1, qs);
+colnames(qs)[1:2]<-c('Depth=0', paste('Depth<', variant.call.cutoff, sep=''));
+print(xtable(qs, caption='Depth'), size='\\tiny', floating=FALSE, caption.placement="top", tabular.environment="longtable", add.to.row=list(as.list(seq(1, nrow(qs), 2)), rep("\\rowcolor[gray]{.9} ", length(seq(1, nrow(qs), 2)))));
+
+# Sequencing quality
+c<-target.stats$qual[toi];
+qs<-t(sapply(c, summary));
+print(xtable(qs, caption='Sequencing quality (read average)'), size='\\tiny', floating=FALSE, caption.placement="top", tabular.environment="longtable", add.to.row=list(as.list(seq(1, nrow(qs), 2)), rep("\\rowcolor[gray]{.9} ", length(seq(1, nrow(qs), 2)))));
+
+# Frequency table
+q<-sapply(target.stats$mapq[toi], function(x) {x<-x[!is.na(x)]; length(x[x>=max(as.numeric(names(bg.stats$mapq)))])/length(x)});
+str<-target.stats$count[toi,1:2]
+frq<-target.stats$base[toi, c('A', 'C', 'G', 'T', 'N')];
+str<-str/rowSums(str);
+frq<-frq/rowSums(frq);
+t<-round(100*cbind(q, str, frq), 2);
+colnames(t)<-paste(c('Best Mapq', '+', '-', 'A', 'C', 'G', 'T', 'N'), '(%)');
+print(xtable(t, caption='Frequencies'), size='\\tiny', floating=FALSE, caption.placement="top", tabular.environment="longtable", add.to.row=list(as.list(seq(1, nrow(t), 2)), rep("\\rowcolor[gray]{.9} ", length(seq(1, nrow(t), 2)))));
+########################################################################################################################
+@
+
+\end{document}
