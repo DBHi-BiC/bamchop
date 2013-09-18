@@ -1,0 +1,516 @@
+
+<<load-up, include=FALSE, echo=FALSE>>=
+#####################################################################################################################
+#####################################################################################################################
+stats<-bamchop$stats;
+bamchop.path<-bamchop$extra.param$bamchop.path;
+
+source.path<-paste(bamchop.path, '/source', sep='');
+sources<-dir(source.path);
+sources<-sources[grep('R$', sources)];
+sapply(paste(source.path, sources, sep='/'), source)->x;
+#####################################################################################################################
+@
+
+<<landscape, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=14, height=17>>=
+#####################################################################################################################
+#####################################################################################################################
+if (!debug) XY<-PlotLandscape(bamchop$coverage, ws=bamchop$extra.param$landscape.ws, y.scale=bamchop$extra.param$landscape.type) else plot(0, type='n');
+#####################################################################################################################
+@
+
+\begin{center}
+\includegraphics[width=7in, height=8.5in]{bamchop-landscape}
+\end{center}
+\pagebreak
+
+\newpage
+\section{Introduction}
+\begin{description}
+\item[\large{Project:}] \Sexpr{bamchop$project.name}
+\item[\large{Sample name:}] \Sexpr{bamchop$sample.name}
+\item[\large{Genome name:}] \Sexpr{bamchop$genome$name}
+\end{description}
+
+\subsection{BAM file}
+<<bam-info, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+info<-bamchop$bamfile;
+file.loc<-paste(strsplit(rownames(info)[1], '/')[[1]], collapse=' > ');
+########################################################################################################################
+@
+\begin{description}
+\item[\large{Size:}] \Sexpr{round(info[[1]]/10^9,2)} GB
+\item[\large{Created:}] \Sexpr{info[[5]]}
+\item[\large{Modified:}] \Sexpr{info[[4]]}
+\item[\large{Location:}] \Sexpr{file.loc}
+\end{description}
+
+\subsection{Summary statisitics}
+\begin{SCtable}[1][h!]
+<<summary-stats, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+#t<-data.frame(nm=names(stats$summary), v=sapply(stats$summary, function(v) {
+#  if (abs(v)<1) d<-2 else if(abs(v)<=10) d<-3 else if (abs(v)<=100) d<-4 else d<-ceiling(log10(abs(v)))+1;
+#  format(v, digits=d, scientific=FALSE, big.mark=',');}
+#));
+FormatSweaveTable(data.frame(nm=names(stats$summary), v=as.numeric(stats$summary)), col=FALSE);
+########################################################################################################################
+@
+\caption{\textbf{Summary statistics}
+\newline
+\textbf{Effective size:} chromosome length without assembly gaps.
+\newline
+\textbf{Sequencing quality score:} assigned by the resequencing machine to indicate base calling confidence. 
+\newline
+\textbf{Mapping quality score:}  assigned by the alignment program to indicating mapping confidence.
+\newline
+\textbf{Mapping location:} strand-specific chromosomal location mapped to by the first base of one or more reads.
+\newline
+\textbf{Duplicated mapping:} the first base of multiple reads mapped to the same strand and chromosomal location.
+}
+\end{SCtable}
+
+\pagebreak
+\section{Read count and sequencing coverage}
+This section summarizes the sequencing depth of reference chromosomes. Sequencing depth equals how many times a nucleotide base was sequenced.
+
+\subsection{Depth categories}
+\begin{SCtable}[1][!ht]
+<<depth-categories, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+FormatSweaveTable(stats$depth$cutoffs, row="Depth", col=TRUE);
+########################################################################################################################
+@
+\caption{\textbf{Depth by cutoffs.} Number and percentage of genomic locations (single bases) having the same or higher sequencing depth than given values.}
+\end{SCtable}
+
+\subsection{Depth by chromosome}
+\begin{center}
+<<depth-chr, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+FormatSweaveTable(stats$depth$by.chromosome, row="Chromosome", col=TRUE, longtable=TRUE, caption='Sequencing depth by chromosome');
+########################################################################################################################
+@
+\end{center}
+
+\subsection{Depth by genomic feature}
+<<depth-feature, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=13, height=9>>=
+########################################################################################################################
+########################################################################################################################
+PlotSimplyBars(c('Genome'=stats$depth$average, stats$depth$by.feature), ylab='Average depth');
+#abline(h=stats$summary["Average sequencing depth"], lwd=2, col='grey', lty=2);
+########################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6.5in, height=4.5in, page=2]{bamchop-depth-feature}
+\caption{\textbf{Average depth of genomic features.} Genomic features are regions annotated based on previous knowledge, such as the RefSeq gene track downloaded from UCSC genome browser. Many applications of high-throughput sequencing technologies, such as exome sequencing and RNA-seq, expect higher depth at exons.}
+\end{figure}
+\end{center}
+
+\pagebreak
+
+\section{Sequencing quality}
+This section summarizes the sequencing quality scores assigned by the sequencer to single bases in each sequencing read and stored in the \textbf{<QUAL>} field of BAM files.
+\vspace*{1\baselineskip}
+\\{\textbf{Quality score summary:}}
+<<qual-summary, include=FALSE, echo=FALSE>>=
+########################################################################################################################
+########################################################################################################################
+stats$quality$summary;
+########################################################################################################################
+@
+
+\subsection{Quality score categories}
+\begin{SCtable}[1][!ht]
+<<qual-cat, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+FormatSweaveTable(stats$quality$count, row="Score", col=TRUE);
+########################################################################################################################
+@
+\caption{\textbf{Score categories.} The number and percentage of base calls having the quality socre equal to or higher than given values.)}
+\end{SCtable}
+
+\subsection{Overall score distribution}
+<<qual-distribution, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=8, height=6>>=
+########################################################################################################################
+########################################################################################################################
+PlotQualityDens(stats$quality$density);
+########################################################################################################################
+@
+
+\begin{center}
+\begin{SCfigure}[1][!ht]
+\includegraphics[width=4in, height=3in]{bamchop-qual-distribution}
+\caption{\textbf{Score distribution.} This distribution is based on all bases of randomly selected sequencing reads, so position-specific sequencing quality is not considered (see below). The quality scores are calculated by subtracting 33 from the integers corresponding to the ASCII characters in \textbf{<QUAL>}. If the convention of Sanger sequencing was applied to generate the ASCII characters, they are equal to -10*Log10(p value), where p value is the likelihood of incorrect base call.}
+\end{SCfigure}
+\end{center}
+
+\subsection{Position-specific score distribution}
+<<qual-position, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=14, height=10>>=
+########################################################################################################################
+########################################################################################################################
+PlotQualityPerc(stats$quality$position.specific$percentiles);
+lines(stats$quality$position$summary[,'Mean_score'], lwd=4, lty=2, col='#00000066');
+########################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=7in, height=5in, page=1]{bamchop-qual-position}
+\caption{\textbf{Position-specific sequencing scores.} This plot shows quality scores at different positions within reads. The dashed lines represents the means of quality scores at different positions; whereas the heat gradient corresponds to percentiles.}
+\end{figure}
+\end{center}
+
+
+\pagebreak
+\section{Mapping to reference}
+This section summarizes the mapping of sequencing reads to reference chromosomes.
+<<mapping, include=FALSE, echo=FALSE>>=
+########################################################################################################################
+########################################################################################################################
+flag<-stats$mapping$flag;
+mapq<-stats$mapping$mapq;
+cigar<-stats$mapping$cigar;
+dup<-stats$mapping$duplicates;
+pair<-stats$mapping$pair;
+########################################################################################################################
+@
+\subsection{Mapping length}
+Mapping length corresponds to the \textbf{<QWIDTH>} field in BAM files, which is the number of bases in a read mapped to reference. Hard clipping reduces mapping length while soft clipping does not.
+\vspace*{1\baselineskip}
+\\{\textbf{Mapping length summary:}}
+<<mapping-length-summ, include=FALSE, echo=FALSE>>=
+########################################################################################################################
+########################################################################################################################
+stats$mapping$length;
+########################################################################################################################
+@
+
+<<mapping-length, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=13, height=8>>=
+########################################################################################################################
+########################################################################################################################
+PlotLogBar(100*stats$mapping$length.count/sum(stats$mapping$length.count));
+########################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6.5in, height=4in]{bamchop-mapping-length}
+\caption{\textbf{Frequency of mapping lengths.} }
+\end{figure}
+\end{center}
+
+\subsection{Mapping flag}
+Mapping flag is stored in the \textbf{<FLAG>} field of BAM files. It uses a series of bitwise codes to represent different combinations of mapping results:
+\begin{center}
+<<flag-definition, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+print(xtable(data.frame(Bitwise=rownames(flag$description), Description=as.vector(flag$description[[1]])), caption='Reference table: mapping flags'), include.rownames=FALSE, floating=FALSE);
+########################################################################################################################
+@
+\end{center}
+
+\subsubsection{Mapping flag categories}
+\begin{SCtable}[1][h!]
+<<flag-categories, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+FormatSweaveTable(flag$by.bit, row='Code', col=TRUE);
+########################################################################################################################
+@
+\caption{\textbf{Mapping flag categories.} The total number and percentage of reads flagged by each category.}
+\end{SCtable}
+
+\subsubsection{Flag value breakdown}
+\begin{center}
+<<flag-breakdown, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+FormatSweaveTable(flag$summary, row="Value", col=TRUE, longtable=TRUE, 
+                  caption="The breakdown of values into flag categories.");
+########################################################################################################################
+@
+\end{center}
+
+\subsection{Mapping score}
+Mapping scores are assigned by the alignment program to indicate the likelihood of false alignment and stored in the \textbf{<MAPQ>} field of BAM files. Higher score usually means longer alignment, less mismatch, and/or higher uniqueness. 
+\vspace*{1\baselineskip}
+\\{\textbf{Mapping score summary:}}
+<<mapq-summary, include=FALSE, echo=FALSE>>=
+########################################################################################################################
+########################################################################################################################
+mapq$summary;
+########################################################################################################################
+@
+
+\subsubsection{Mapping score categories}
+\vspace*{1\baselineskip}
+\begin{SCtable}[1][!ht]
+<<mapq-categories, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+FormatSweaveTable(mapq$count, row="Score", col=TRUE);
+########################################################################################################################
+@
+\caption{\textbf{Mapping score categories.} The total number and percentage of reads having mapping scores equal to or higher than given values.}
+\end{SCtable}
+
+\subsubsection{Overall score distribution}
+<<mapq-distribution, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=13, height=8>>=
+########################################################################################################################
+########################################################################################################################
+c<-mapq$distribution[,2]/sum(as.numeric(mapq$distribution[,2]));
+names(c)<-mapq$distribution[,1];
+PlotLogBar(c, xlab='Mapping score');
+########################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6.5in, height=4in]{bamchop-mapq-distribution}
+\caption{\textbf{Mapping score distribution. } By definition, mapping quality equals to -10*Log10(p value), where p value is the likelihood of incorrect mapping; however, its calculation depends on individual programs.}
+\end{figure}
+\end{center}
+
+\subsection{Mismatch (CIGAR)}
+SAM uses the \textbf{<CIGAR>} field to compactly represent alignments. CIGAR characters are used in concert with lengths to describe various types of matching, mismatching, clipping, padding and splicing events within an alignment.
+\subsubsection{Mismatch categories}
+\begin{center}
+<<cigar-definition, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+print(xtable(data.frame(Bitwise=rownames(cigar$description), Description=as.vector(cigar$description[[1]])), caption='Reference table: CIGAR code'), include.rownames=FALSE, floating=FALSE);
+########################################################################################################################
+@
+\end{center}
+
+\begin{SCtable}[1][h!]
+<<cigar-count, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+FormatSweaveTable(cigar$count, row="Category", col=TRUE);
+########################################################################################################################
+@
+\caption{\textbf{Mismatch categories} The total number and percentage of reads having specific types of mismatches.}
+\end{SCtable}
+
+\subsubsection{Gapped alignment}
+\textbf{\Sexpr{if(cigar$gapped$count==0) print('Not reads having gapped alignment.') else print('Gap size summary:')}}
+<<gap-size-summ, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+if (cigar$gapped$count>0) cigar$gapped$summary;
+########################################################################################################################
+@
+
+<<gap-size, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=8, height=6>>=
+########################################################################################################################
+########################################################################################################################
+if (cigar$gapped$count>0) {
+iqr<-as.numeric(cigar$gapped$summary[5]-cigar$gapped$summary[2]); 
+PlotDensity(cigar$gapped$density, xlab='Gap size (bp)', ylab='Frequency', xlim=c(0, as.numeric(cigar$gapped$summary[5])+12*iqr), main='Gap size');
+} else {
+  plot(0, type='n', xlab='', ylab='', axes=FALSE); 
+  box();
+}
+########################################################################################################################
+@
+\begin{center}
+\begin{SCfigure}[1][h!]
+\includegraphics[width=4in, height=3in]{bamchop-gap-size}
+\caption{\textbf{Distribution of gap size.} If the alignment program tried to align sub-sequence of the same read to remote locations, \textbf{<CIGAR>} will provide the size of gapped regions}
+\end{SCfigure}
+\end{center}
+
+
+\subsection{Duplicated mapping}
+Duplicated mapping refers to multiple reads having their first base mapped to the same strand and location. Duplication level is the number of reads sharing the same duplicated mapping. It is an indicator of the effect of PCR artifact, but also depends on local and overall sequencing depth.
+
+\subsubsection{Duplication level categories}
+\textbf{The average number of duplicated reads at each mapping location is \Sexpr{round(sum(as.numeric(dup[,3]))/sum(as.numeric(dup[,2])), 3)}.}
+\begin{SCtable}[1][h!]
+<<dup-categories, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+t<-rbind(dup[dup[,1]<=10, -1], colSums(dup[dup[,1]>10, -1]));
+t<-cbind('Level'=c(1:(nrow(t)-1), '>10'), t); rownames(t)<-NULL;
+FormatSweaveTable(t, col=TRUE);
+########################################################################################################################
+@
+\caption{\textbf{Duplication level categories.} Numbers of mapping locations and reads having the duplication levels of the given values.}
+\end{SCtable}
+
+\subsubsection{Overall duplication distribution}
+<<dup-distribution, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=12, height=6.4>>=
+########################################################################################################################
+########################################################################################################################
+plot(dup[,1], dup[,2], log='xy', xlab='Mapping duplication level', ylab='Number of unique positions', 
+     type='s', cex.lab=1.5, cex.main=2, lwd=2, col='darkblue', xaxs='i'); 
+abline(v=c(1:10, 10^(2:20)), lty=2, col='lightgrey');
+########################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6in, height=3.2in]{bamchop-dup-distribution}
+\caption{textbf{Distribution of duplication levels}. The x-axis indicates the number of reads sharing the same mapping location of their 5'-end and the y-axis is the total occurance of each level. Only reads mapped to the forward strand and the first 10 million reads of each chromosome was used to reduce computation.}
+\end{figure}
+\end{center}
+
+\subsection{Paired reads}
+\textbf{\Sexpr{if (!pair$paired) print("No information about paired-end reads is available in this BAM file.") else print("Information about paired-end reads is available in this BAM file."); }}
+
+\subsubsection{Read count summary}
+\textbf{\Sexpr{if(!pair$paired) print('Not applicable.')}}
+\begin{SCtable}[1][h!]
+<<pair-count, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+if (pair$paired) t<-pair$summary else t<-data.frame(Count=c("Total paired-end reads"=0), Percent=c("Total paired-end reads"=0));
+FormatSweaveTable(t, row="Category", col=TRUE); 
+########################################################################################################################
+@
+\caption{\textbf{Paired-end reads.} Read counts in this table are based on the "flag" field in BAM file. Properly mapping paired-end reads are reads mapped to the opposite strand of the same chromosome. }
+\end{SCtable}
+
+\subsubsection{Insertion size of paired reads}
+\textbf{\Sexpr{if(!pair$paired) print('Not applicable.') else print('Size summary:')}}
+
+<<pair-insert-summary, include=FALSE, echo=FALSE>>=
+########################################################################################################################
+########################################################################################################################
+if (pair$paired) pair$insert.size$summary;
+########################################################################################################################
+@
+
+<<pair-insert, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=8, height=6>>=
+########################################################################################################################
+########################################################################################################################
+if (pair$paired) {
+pair$insert.size$summary;
+iqr<-as.numeric(pair$insert.size$summary[5]-pair$insert.size$summary[2]); 
+PlotDensity(pair$insert.size$density, xlab='Insertion size (bp)', ylab='Frequency', xlim=c(0, as.numeric(pair$insert.size$summary[5])+12*iqr), main='Insertion size');
+} else {
+  plot(0, type='n', xlab='', ylab='', axes=FALSE); 
+  box();
+}
+########################################################################################################################
+@
+\begin{center}
+\begin{SCfigure}[1][h!]
+\includegraphics[width=4in, height=3in]{bamchop-pair-insert}
+\caption{\textbf{Distribution of insertion size. }Insertion size is the distance between the mapping locations of the 5'-end of paired reads. It represents the size of DNA fragment to be sequenced.}
+\end{SCfigure}
+\end{center}
+
+\pagebreak
+\section{Base frequency}
+This section summarizes the frequency of nucleic acid bases within sequencing reads in order to identify sequencing bias. 
+
+\subsection{Base N frequency}
+\begin{SCtable}[1][h!]
+<<base-n, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+FormatSweaveTable(stats$base$N, row="", col=TRUE);
+########################################################################################################################
+@
+\caption{\textbf{N base frequency.} The Ns in the reads are assigned by the sequencing machine to suggest that the base cannot be determined due to low quality or other reasons. This table shows the number and percentage of Ns and reads including any Ns. Ns are then excluded from the following analyses of base frequency. }
+\end{SCtable}
+
+\subsection{Expected vs. observed frequency}
+\begin{SCtable}[1][h!]
+<<base-exp-obs, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+FormatSweaveTable(stats$base$observed.vs.expected, row="", col=TRUE);
+########################################################################################################################
+@
+\caption{\textbf{Expected vs. observed base frequency.} The expected base frequency is based on the whole reference genome and the observed frequency is the base frequency in sequencing reads. Their ratio reflects the sequencing bias of nucleic acid bases.}
+\end{SCtable}
+
+\subsection{GC content}
+<<base-gc, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=8, height=6>>=
+########################################################################################################################
+########################################################################################################################
+c<-stats$base$by.read;
+PlotDensity(100*rowSums(c[, c('C', 'G')])/rowSums(c[, c('A', 'C', 'G', 'T')]), col='#8888FF88', xlab='GC%', ylab='Frequency', xlim=c(0, 100), main='GC% per read');
+########################################################################################################################
+@
+\begin{center}
+\begin{SCfigure}[1][h!]
+\includegraphics[width=3.2in, height=2.5in]{bamchop-base-gc}
+\caption{\textbf{GC content.} Percentage of C/G bases within each read.}
+\end{SCfigure}
+\end{center}
+
+\subsection{Position-specific base frequency}
+Position-specific frequency of bases indicates whether there is a sequencing bias at both ends of the reads. The bias can be introduced via a variety of sources, such as DNA fragmentation and primer contamination. 
+<<base-position, include=FALSE, echo=FALSE>>=
+########################################################################################################################
+########################################################################################################################
+base.pos<-stats$bases$position.specific;
+########################################################################################################################
+@
+\subsubsection{Single base}
+<<base-fst-lst, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=10, height=6>>=
+########################################################################################################################
+########################################################################################################################
+PlotBaseLogo(base.pos$first$freq.normalized, 'First 10 bases');
+PlotBaseLogo(base.pos$last$freq.normalized, 'Last 10 bases');
+########################################################################################################################
+@
+\begin{center}
+\begin{figure}[h!]
+\subfigure{\includegraphics[width=3.33in, height=2in, page=2]{bamchop-base-fst-lst} }
+\subfigure{\includegraphics[width=3.33in, height=2in, page=4]{bamchop-base-fst-lst} }
+\caption{\textbf{Single base frequency at both ends.}The base frequency of the first and last 10 bases (the rightmost is the last base) of reads. The frequency was normalized by the overall base frequency with sequencing reads, so this summary indicates the preference of sequencing to start with a given nucleic acid base.}
+\end{figure}
+\end{center}
+
+\subsubsection{First two bases}
+<<base-two, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=8, height=8>>=
+########################################################################################################################
+########################################################################################################################
+library(vcd);
+par(mar=c(0,0,0,0));
+mosaic(base.pos$dibase$normalize.frequency, main='Dibase frequency');
+########################################################################################################################
+@
+
+\begin{center}
+\begin{SCfigure}[1][h!]
+\includegraphics[width=2.5in, height=2.5in]{bamchop-base-two}
+\caption{\textbf{First two base combination.}\small{This plot summarizes the frequency of the two-base combinations at the 5'-end of reads. The size of the blocks represent their relative frequency after adjusted by their expected frequency based on the position-specific frequency of the first two bases.}}
+\end{SCfigure}
+\end{center}
+
+\subsubsection{\Sexpr{base.pos$kmer$k}-mer frequency}
+The frequency of \Sexpr{paste(base.pos$kmer$k, '-mer', sep='')} at both ends of reads.
+\begin{center}
+<<base-kmer, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+mer<-paste(base.pos$kmer$k, '-mer', sep='');
+t<-rbind(base.pos$kmer$first, base.pos$kmer$last);
+t<-t[order(t[['Observed_count']]), ];
+#t<-cbind(rownames(t), t);
+#names(t)[1]<-mer;
+#t[[1]]<-as.vector(t[[1]]);
+#t<-rbind(t[1:min(nrow(t)/2, 10),], rep('---', ncol(t)), t[max(nrow(t)/2, nrow(t)-9):nrow(t),]);
+
+FormatSweaveTable(t[1:min(nrow(t), 10),], row=mer, col=TRUE, longtable=TRUE, caption='Lowest frequency', force.size='scriptsize'); 
+FormatSweaveTable(t[nrow(t):max(1, nrow(t)-9),], row=mer, col=TRUE, longtable=TRUE, caption='Highest frequency', force.size='scriptsize'); 
+FormatSweaveTable(base.pos$kmer$outliers, row=mer, col=TRUE, longtable=TRUE,  caption='Highest relative enrichment', force.size='scriptsize');
+########################################################################################################################
+@
+\end{center}

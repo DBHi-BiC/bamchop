@@ -1,0 +1,59 @@
+\documentclass{article}
+
+%headers and footers
+\usepackage{fancyhdr}
+\usepackage{array}
+\pagestyle{fancyplain}
+
+\usepackage{sidecap}
+\usepackage{subfigure}
+\usepackage{float}
+\usepackage{longtable}
+\usepackage{colortbl}
+\usepackage{setspace}
+
+\fancyhfoffset[LE, LO, RE, RO]{.1in}
+
+\rhead{$\Sexpr{bamchop$sample.name}$}
+\chead{}
+\lhead{}
+
+\lfoot{\includegraphics[width=0.1\textwidth]{\Sexpr{bamchop$extra.param$logo}} {\bfseries \Sexpr{bamchop$extra.param$affiliation}}}
+\cfoot{}
+\rfoot{\fancyplain{}{\thepage}}
+
+\renewcommand{\footrulewidth}{0.4pt}
+
+\addtolength{\voffset}{-54pt}
+\addtolength{\hoffset}{-72pt}
+\addtolength{\textwidth}{144pt}
+\addtolength{\textheight}{108pt}
+
+
+%hyperlink setup
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{underscore}
+\usepackage{appendix}
+\definecolor{dark-red}{rgb}{0.4,0.15,0.15}
+\definecolor{dark-blue}{rgb}{0.15,0.15,0.4}
+\definecolor{medium-blue}{rgb}{0,0,0.5}
+\hypersetup{
+  colorlinks, linkcolor={dark-red},
+  citecolor={dark-blue}, urlcolor={medium-blue}
+}
+
+\setlength{\headheight}{10pt}
+\setlength{\parindent}{0pt} 
+\setlength{\parskip}{1ex}
+\setlength{\tabcolsep}{5pt}
+\setlength{\extrarowheight}{1.5pt}
+
+\begin{document}
+\begin{titlepage}
+\title{\Sexpr{bamchop$extra.param$project.name}: \Sexpr{bamchop$sample.name}}
+\author{Prepared by \Sexpr{bamchop$extra.param$prepared.by}}
+\maketitle
+\tableofcontents
+\end{titlepage}
+

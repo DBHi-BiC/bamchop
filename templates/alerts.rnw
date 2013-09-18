@@ -1,0 +1,12 @@
+\newpage
+
+\section{Alerts}
+<<alerts, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+alerts<-paste('---', bamchop$alerts);
+if (length(alerts)==0) alerts<-'There are no alerts.';
+#alerts<-paste(alerts, collapse=' \\');
+print(xtable(data.frame(alerts)), floating=FALSE, include.rownames=FALSE, include.colnames=FALSE, hline.after=NULL, only.contents=TRUE);
+########################################################################################################################
+@

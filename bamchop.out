@@ -1,0 +1,37 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}
+\BOOKMARK [2][-]{subsection.1.1}{BAM file}{section.1}
+\BOOKMARK [2][-]{subsection.1.2}{Summary statisitics}{section.1}
+\BOOKMARK [1][-]{section.2}{Read count and sequencing coverage}{}
+\BOOKMARK [2][-]{subsection.2.1}{Depth categories}{section.2}
+\BOOKMARK [2][-]{subsection.2.2}{Depth by chromosome}{section.2}
+\BOOKMARK [2][-]{subsection.2.3}{Depth by genomic feature}{section.2}
+\BOOKMARK [1][-]{section.3}{Sequencing quality}{}
+\BOOKMARK [2][-]{subsection.3.1}{Quality score categories}{section.3}
+\BOOKMARK [2][-]{subsection.3.2}{Overall score distribution}{section.3}
+\BOOKMARK [2][-]{subsection.3.3}{Position-specific score distribution}{section.3}
+\BOOKMARK [1][-]{section.4}{Mapping to reference}{}
+\BOOKMARK [2][-]{subsection.4.1}{Mapping length}{section.4}
+\BOOKMARK [2][-]{subsection.4.2}{Mapping flag}{section.4}
+\BOOKMARK [3][-]{subsubsection.4.2.1}{Mapping flag categories}{subsection.4.2}
+\BOOKMARK [3][-]{subsubsection.4.2.2}{Flag value breakdown}{subsection.4.2}
+\BOOKMARK [2][-]{subsection.4.3}{Mapping score}{section.4}
+\BOOKMARK [3][-]{subsubsection.4.3.1}{Mapping score categories}{subsection.4.3}
+\BOOKMARK [3][-]{subsubsection.4.3.2}{Overall score distribution}{subsection.4.3}
+\BOOKMARK [2][-]{subsection.4.4}{Mismatch \(CIGAR\)}{section.4}
+\BOOKMARK [3][-]{subsubsection.4.4.1}{Mismatch categories}{subsection.4.4}
+\BOOKMARK [3][-]{subsubsection.4.4.2}{Gapped alignment}{subsection.4.4}
+\BOOKMARK [2][-]{subsection.4.5}{Duplicated mapping}{section.4}
+\BOOKMARK [3][-]{subsubsection.4.5.1}{Duplication level categories}{subsection.4.5}
+\BOOKMARK [3][-]{subsubsection.4.5.2}{Overall duplication distribution}{subsection.4.5}
+\BOOKMARK [2][-]{subsection.4.6}{Paired reads}{section.4}
+\BOOKMARK [3][-]{subsubsection.4.6.1}{Read count summary}{subsection.4.6}
+\BOOKMARK [3][-]{subsubsection.4.6.2}{Insertion size of paired reads}{subsection.4.6}
+\BOOKMARK [1][-]{section.5}{Base frequency}{}
+\BOOKMARK [2][-]{subsection.5.1}{Base N frequency}{section.5}
+\BOOKMARK [2][-]{subsection.5.2}{Expected vs. observed frequency}{section.5}
+\BOOKMARK [2][-]{subsection.5.3}{GC content}{section.5}
+\BOOKMARK [2][-]{subsection.5.4}{Position-specific base frequency}{section.5}
+\BOOKMARK [3][-]{subsubsection.5.4.1}{Single base}{subsection.5.4}
+\BOOKMARK [3][-]{subsubsection.5.4.2}{First two bases}{subsection.5.4}
+\BOOKMARK [3][-]{subsubsection.5.4.3}{5-mer frequency}{subsection.5.4}
+\BOOKMARK [1][-]{section.6}{Alerts}{}

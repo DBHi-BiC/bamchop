@@ -1,0 +1,186 @@
+\newpage
+
+\section{ChIP-seq}
+This section of the report summarizes information related to a ChIP-seq experiment. 
+
+<<chipseq, include=FALSE, echo=FALSE>>=
+#####################################################################################################################
+#####################################################################################################################
+chipseq<-bamchop$chip;
+
+str.corr<-chipseq$strand.correlation;
+chip.peak<-chipseq$peak;
+tss.dep<-chipseq$tss;
+#####################################################################################################################
+@
+
+\subsection{Strand-strand correlation}
+Since sequencing usually starts from the 5-prime end of DNA fragments, reads mapped to the forward and reverse strands were skewed to the left and right respectively. While we expect a positive correlation between the two strands if reads were enriched around ChIP-ed regions, the forward strand needs to be shifted towards the right, or vice versa, to achieve the maximal strand correlation. The assoication between correlation coefficients and numbers of bases to shift indicates the distribution of DNA fragment sizes.
+
+<<chip-strand-corr, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=6.5, height=4.5>>=
+########################################################################################################################
+########################################################################################################################
+PlotStrandCorr(str.corr$shift, str.corr$coefficient, str.corr$peak.index);
+########################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6.5in, height=4.5in, page=1]{bamchop-chip-strand-corr}
+\caption{\textbf{Strand-strand correlation vs. shifting.}The x-axis is the number of bases to shift the forward strand towards the right. Correlation was calculated between the 5-prime end of mapping locations after removing duplicated mappings.}
+\end{figure}
+\end{center}
+
+\subsection{Peaks}
+This section of the report is a quick summary of peaked regions without using specifically designed peak calling program. All reads were extended to \Sexpr{chipseq$paramters$fragment.length} base pairs at the 3-prime end. A peak is defined here as a continuous region with at least \Sexpr{chip.peak$height[[1]][1]}X depth. 
+
+\begin{SCtable}[1][h!]
+<<peak-summary, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+t<-chip.peak$summary;
+t[[1]]<-paste(c(rep('>=', nrow(t)-1), '='), gsub(' ', '', format(t[[1]], big.mark=',', scientific=FALSE)), sep='');
+FormatSweaveTable(t, col=TRUE);
+########################################################################################################################
+@
+\caption{\textbf{Peak summary.} Numbers of peaks with given depth and their average width.}
+\end{SCtable}
+
+\subsubsection{Peak height}
+Peak height is the maximal sequencing depth within a peak.
+<<chip-peak-height, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=7, height=4.5>>=
+########################################################################################################################
+########################################################################################################################
+par(mar=c(4,5,1,1));
+plot(chip.peak$height$cutoff, chip.peak$height$count, log='xy', col='white', type='l', ylim=c(1, max(chip.peak$height[[2]])),
+     xaxs='i', yaxs='i', xlab='Peak height (X)', ylab='Number of peaks', cex.lab=1.5);
+polygon(c(min(chip.peak$height[[1]]), chip.peak$height[[1]], max(chip.peak$height[[1]])), 
+        c(1, chip.peak$height[[2]], 1), col='#2288FF88', border='gold', lwd=3); 
+axis(1, at=min(chip.peak$height$cutoff));
+abline(v=c(1:9, 10^(1:100)), h=c(1:9, 10^(1:100)), lty=2, lwd=0.5, col='lightgrey');
+box(lwd=2);
+########################################################################################################################
+@
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=7in, height=4.5in, page=1]{bamchop-chip-peak-height}
+\caption{\textbf{Peak height distribution.}}
+\end{figure}
+\end{center}
+
+\subsubsection{Peak width}
+Peak width is the size of a continuous region with a minimum of \Sexpr{chip.peak$height[[1]][1]}X depth.
+\vspace*{1\baselineskip}
+\\{\textbf{Peak width summary:}}
+<<chip-peak-width-summary, include=FALSE, echo=FALSE>>=
+########################################################################################################################
+########################################################################################################################
+chip.peak$width$summary;
+########################################################################################################################
+@
+
+<<chip-peak-width, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=6.5, height=4.5>>=
+########################################################################################################################
+########################################################################################################################
+iqr<-as.numeric(chip.peak$width$summary[5]-chip.peak$width$summary[2]);
+PlotDensity(chip.peak$width$density, xlab='Peak width (bp)', xlim=c(0, chip.peak$width$summary[5]+12*iqr));
+########################################################################################################################
+@
+
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6.5in, height=4.5in, page=1]{bamchop-chip-peak-width}
+\caption{\textbf{Peak width distribution.}\small{}}
+\end{figure}
+\end{center}
+
+\subsubsection{Peak frequency by genomic feature}
+<<chip-peak-count-feature, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+FormatSweaveTable(t(chip.peak$count.by.feature), row="Feature", col=TRUE, longtable=TRUE, caption='Number of peaks mapped to genomic features.');
+########################################################################################################################
+@
+
+<<chip-peak-by-feature, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=14, height=9>>=
+########################################################################################################################
+########################################################################################################################
+library(gplots);
+par(mar=c(4,5,1,1));
+mtrx<-t(chip.peak$peaks.per.mb);
+mtrx<-mtrx[1:min(4, nrow(mtrx)),];
+barplot2(mtrx, be=TRUE, cex.lab=2, ylab='Peaks per million bases', legend=rownames(mtrx), 
+         col=rainbow(nrow(mtrx)), yaxs='i', ylim=c(0, 1.2*max(mtrx)));
+abline(h=chip.peak$summary[1,2]/bamchop$stats$summary[['Total effective size (bp)']]*10^6, lty=2, col='#888888');
+box(lwd=2);
+########################################################################################################################
+@
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=7in, height=4.5in, page=1]{bamchop-chip-peak-by-feature}
+\caption{\textbf{Peak frequency within genomic features.}The dashed line is the overall frequency of peaks with depth no less than \Sexpr{chip.peak$summary[1,1]} within the whole genome.}
+\end{figure}
+\end{center}
+
+\subsubsection{Top peaks}
+<<top-peaks, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+t<-chip.peak$all;
+ht<-as.vector(elementMetadata(t)$height);
+t<-as.data.frame(t[ht>=sort(ht, decreasing=TRUE)[20]])[-5];
+names(t)<-c('Chromosome', 'Start', 'End', 'Width', 'Height');
+FormatSweaveTable(t[order(t$Height), ][nrow(t):1,], col=TRUE, longtable=TRUE, caption=paste('Top', nrow(t), 'peaks with the highest height.'), force.size='scriptsize');
+########################################################################################################################
+@
+
+
+\subsection{TSS}
+This section of the report summarizes sequencing depth around transcription start sites (TSS).
+\subsubsection{Strand-specific depth around TSS}
+<<chip-tss-loc, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=6.5, height=4.5>>=
+########################################################################################################################
+########################################################################################################################
+PlotTssDepth(tss.dep$by.location$Sense, tss.dep$by.location$Antisense, -1000:1000, avg=tss.dep$global.average)
+########################################################################################################################
+@
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6.5in, height=4.5in, page=1]{bamchop-chip-tss-loc}
+\caption{\textbf{Read frequency around TSS.}This plot shows the frequency of reads whose 5-prime end was mapped around TSS of RefSeq genes. The read counts were normalized by the global average after duplicated mapping was not removed.}
+\end{figure}
+\end{center}
+
+\subsubsection{Read counts around individual TSSs}
+Read counts around TSS of individual genes.
+\vspace*{1\baselineskip}
+\\{\textbf{Read count summary:}}
+<<chip-tss-gene-summ, include=FALSE, echo=FALSE>>=
+########################################################################################################################
+########################################################################################################################
+summ<-summary(tss.dep$by.gene$Total);
+summ;
+########################################################################################################################
+@
+
+<<chip-tss-gene, include=FALSE, echo=FALSE, fig=TRUE, results=hide, eval=TRUE, width=6.5, height=4.5>>=
+########################################################################################################################
+########################################################################################################################
+PlotDensity(density(tss.dep$by.gene$Total), xlab='Read count', ylab='Frequency', xlim=c(0, summ[5]+6*(summ[5]-summ[2])));
+########################################################################################################################
+@
+\begin{center}
+\begin{figure}[H]
+\includegraphics[width=6.5in, height=4.5in, page=1]{bamchop-chip-tss-gene}
+\caption{\textbf{Read count distribution of genes.}This plot shows the distribution of read counts within the [-1kb, 1kb] region of RefSeq TSSs. Duplicated mapping was excluded.}
+\end{figure}
+\end{center}
+
+<<chip-tss-gene-top, echo=FALSE, results=tex>>=
+########################################################################################################################
+########################################################################################################################
+c<-tss.dep$by.gene;
+c<-c[c$Total>=sort(c$Total, decreasing=TRUE)[20], ];
+FormatSweaveTable(c[order(c$Total), ][nrow(c):1,], col=TRUE, longtable=TRUE, caption=paste('Top', nrow(c), 'genes with the highest read counts around TSS'), force.size='scriptsize');
+########################################################################################################################
+@
