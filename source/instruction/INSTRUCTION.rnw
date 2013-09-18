@@ -2,6 +2,7 @@
 program.name<-'bamchop';
 author<-'Zhe Zhang';
 affiliation<-'Center for Biomedical Informatics at CHOP';
+url<-'https://github.com/CBMi-BiG/bamchop';
 @
 
 \documentclass{article}
@@ -69,7 +70,7 @@ affiliation<-'Center for Biomedical Informatics at CHOP';
 
 \begin{description}
 \item[LaTeX:] Download from \url{http://www.latex-project.org/ftp.html} and install it. The size of the full Mac distribution is about 1.8 GB. You can also use smaller version such as MacTeXtras from \url{http://mirror.ctan.org/systems/mac/mactex/MacTeXtras.zip}. 
-\item[R:] \textit{\Sexpr{program.name}} runs within R, so you need to download the newest version of R from \url{http://www.r-project.org} and install it. The basic functions of R are extended by thousands of packages and \textit{\Sexpr{program.name}} requires the following packages to run:
+\item[R:] \textit{\Sexpr{program.name}} runs within R, so you need to download the newest version of R from \url{http://www.r-project.org} and install it. Bamchop has been tested in R version 2.13 and 2.15. Version 3.01 and above is currently not recommended due to package compliance. The basic functions of R are extended by thousands of packages and \textit{\Sexpr{program.name}} requires the following packages to run:
   \begin{itemize}
   \item \textbf{R.oo}
   \item \textbf{gplots}
@@ -85,7 +86,10 @@ affiliation<-'Center for Biomedical Informatics at CHOP';
   \item \textbf{BSgenome}
   \item reference genome, such as \textbf{BSgenome.Hsapiens.UCSC.hg19} package if hg19 was used for alignment
   \end{itemize}
+\item[Bamchop:] Download bamchop from \url{\Sexpr{url}}, and copy the whole folder to the location where will be your local home of bamchop. Replace the logo.jpg file with the logo of your own institute/group. There are a couple of examples in /reports. This subfolder will also be the place to put the results of your own runs.
 \end{description}
+
+
 
 \subsection{Install R packages within R}
 To install an R package within R:
@@ -110,42 +114,25 @@ biocLite("Rsamtools");
 Alternatively, you can download a package to local disk and install it using shell command \textbf{R CMD INSTALL}.
 
 
-\section{Prepare input files}
-Running \textit{\Sexpr{program.name}} requires two tab-delimited text files, respectively with information about:
+\section{Inputs}
+Open the bamchop.r file to edit input variables. The file was split into several sections:
 \begin{description}
-\item[BAM files:] this file should contain two columns with no header.
+\item[Mandatory variables. ] These are required variables for each bamchop run. A value must be assigned to each of them. 
 \begin{itemize}
-  \item \textbf{Column 1: } unique names of BAM files. The names will be used as the folder names of output files.
-  \item \textbf{Column 2: } full path to BAM files.
+  \item \textbf{bamchop.path: } the full path to the bamchop home folder.
+  \item \textbf{genome.name: } name of the reference genome used to generate the BAM files. Currently only support hg19, mm9, and ce10.
+  \item \textbf{bamflies: } assign the full path of each BAM file to a unique ID. The ID will be used to name the output files.
   \end{itemize}
-\item[Requencing targets:] this file should contain five columns with no header. 
-\begin{itemize}
-  \item \textbf{Column 1: } unique names of targeted regions.
-  \item \textbf{Column 2: } chromosome names of target regions. Try to use names consistent with those used in reference genome. Otherwise, the program will try to map chromosome names with its best guess.
-  \item \textbf{Column 3: } start position of target regions.
-  \item \textbf{Column 4: } end position of target regions.
-  \item \textbf{Column 5: } assign value 1 to all targets of interest (TOI) and 0 to all the other targets. \textit{\Sexpr{program.name}} will provide details about individual targets. However, reporting details about many targets will slow down the program and increase the size of ouput substantially. So, we suggest you to specify a subset of them as TOI when there are more than 144 total targets. The TOI can be selected randomly, by size, by importance, or any other criteria. 
+\item[Extra section:] bamchop can be potentially expanded to describe application-specific information, such as ChIP-seq and targeted resequencing. This feature is not currently supported by bamchop1.01. So no inputs are required in this section. 
+\item[Extra parameters:] extra variables that further describe the data set. 
+  \begin{itemize}
+  \item \textbf{project.name: } name of the data set or project.
+  \item \textbf{prepared.by: } the person who made the run. 
+  \item \textbf{affiliation: } affiliation of the person.
+  \item \textbf{genome.name: } Name of the reference genome.
+  \item \textbf{logo: } name of the file with an image to be put in the footer with affiliation. Copy the file into the program folder if you want to use your own.
+  \item The rest of the variables in this section are for advanced users. Changes are not recommended.
   \end{itemize}
-\end{description}
-
-\section{Set parameters}
-Open and edit the file \textbf{paste(program.name, '_param.r', sep='')} to set running parameters. There are three types of parameters:
-\begin{description}
-\item[Required parameters:] These parameters should be specified for each data set.
-\begin{itemize}
-  \item \textbf{bams} The full path and name of the tab-delimited text file with BAM file information (see section \textbf{Prepare input files}).
-  \item \textbf{targets} The full path and name of the tab-delimited text file with target information (see section \textbf{Prepare input files}).
-  \item \textbf{path.out} The fule path where all the output files will be stored.
-  \end{itemize}
-\item[Optional parameters:] Change the value of these parameters when necessary
-\begin{itemize}
-  \item \textbf{project.name}
-  \item \textbf{prepared.by} 
-  \item \textbf{affiliation} 
-  \item \textbf{genome.name} Name of the reference genome.
-  \item \textbf{logo} Name of the file with an image to be put in the footer with affiliation. Copy the file into the program folder if you want to use your own.
-  \end{itemize}
-  \item[Advanced parameters:] These are for experienced users only.  
 \end{description}
 
 \section{Run \Sexpr{program.name}}
@@ -155,10 +142,25 @@ getwd();
 @
 to make sure you in the right working directory; and run \textit{\Sexpr{program.name}} with
 <<run, eval=FALSE>>=
-source('bam2pdf.r');
+source('bamchop.r');
 @
 The running will take a while. Wait patiently. 
 
 \section{Outputs}
-All output files will be saved to the folder specified by the \textbf{path.out} parameter. The minimal outputs are a set of pdf files, each with an individual figure, and a full report named \textbf{\Sexpr{paste(program.name, '.pdf', sep='')}}, within each subfolder. 
+The outputs of each BAM file will be saved in a subfolder of the /results folder, named by the ID of the BAM file. Each folder includes the following files:
+\begin{description}
+\item[] Two R objects of processed data imported from the BAM file, one full version and one slim version. These objects can be used later to obtain extra information.
+\item[] A set of PDF files, each with a plot describing one aspect of the BAM file
+\item[] A summarized report with all the PDF files and their detailed explanation, named as ID.pdf.
+\end{description}
+
+
+\section{More information}
+\begin{description}
+\item[Publication: ] \url{http://www.biomedcentral.com/bmcbioinformatics/supplements/14/S11}
+\item[Source code: ] \url{https://github.com/CBMi-BiG/bamchop}
+\item[Discussion forum:] \url{http://www.biostars.org/p/81285/}
+\end{description}
+
+
 \end{document}

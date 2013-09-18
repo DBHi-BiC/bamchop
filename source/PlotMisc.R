@@ -1,3 +1,111 @@
+# Plot strand-specific sequencing depth around TSS
+PlotTssDepth<-function(ss, as, loc, avg=NA, smooth=TRUE) {
+  # ss, as  Average sequencing depth on both strands
+  # loc     Relative locations to TSS
+  # avg     Global average
+  
+  if (!identical(avg, NA)) {
+    ss<-ss/avg;
+    as<-as/avg;
+    ylab='Relative read frequency';
+  } else ylab='Read frequency';
+  
+  if (smooth) {
+    library(nucleR);
+    ss<-filterFFT(ss, 4/length(loc));
+    as<-filterFFT(as, 4/length(loc));
+  }
+  
+  mn<-min(c(ss, as));
+  mx<-max(c(ss, as));
+  rng<-mx-mn;
+  
+#  if (!identical(avg, NA) & avg>0) {
+#    yl0<-0;
+#    yl1<-1.05*max(1, mx);
+#  } else {
+    yl0<-mn-0.1*rng;
+    yl1<-mx+0.1*rng;
+#  }
+  
+  par(mar=c(4, 5, 1,1));
+  plot(0, xlim=c(min(loc), max(loc)), ylim=c(yl0, yl1), xaxs='i', yaxs='i', xlab='Distance to TSS', ylab=ylab, type='n', cex.lab=2);  
+  abline(v=seq(min(loc), max(loc), inv<-10^max(1, floor(log10(length(loc))-1))), col='#BBBBBB', lwd=0.5, lty=2);
+  
+  lines(loc, ss, col='#FF8833', lwd=2);
+  lines(loc, as, col='#3388FF', lwd=2);
+  
+  if (smooth) {
+    trn.ss<-diff(sign(diff(ss)));
+    trn.as<-diff(sign(diff(as)));
+    
+    if (length(loc[trn.ss==-2])) text(loc[trn.ss==-2], ss[trn.ss==-2], pos=3, labels=loc[trn.ss==-2], col='#FF1111');
+    if (length(loc[trn.ss==2])) text(loc[trn.ss== 2], ss[trn.ss== 2], pos=3, labels=loc[trn.ss== 2], col='#FF1111');
+    if (length(loc[trn.as==-2])) text(loc[trn.as==-2], as[trn.as==-2], pos=3, labels=loc[trn.as==-2], col='#1111FF');
+    if (length(loc[trn.as==2])) text(loc[trn.as== 2], as[trn.as== 2], pos=3, labels=loc[trn.as== 2], col='#1111FF');
+    
+    points(loc[trn.ss==-2], ss[trn.ss==-2], pch='>', col='green');
+    points(loc[trn.ss== 2], ss[trn.ss== 2], pch='>', col='green');
+    points(loc[trn.as==-2], as[trn.as==-2], pch='<', col='green');
+    points(loc[trn.as== 2], as[trn.as== 2], pch='<', col='green');
+  }
+  
+  box(lwd=2);
+}
+
+# Plot a strand-strand correlation change after base shifting
+PlotStrandCorr<-function(shift, corr, summits.ind=NA) {
+  par(mar=c(5,5,0.5,0.5));
+  
+  plot(shift, corr, type='l', col='white', lwd=5, xlim=c(0, max(shift)), ylim=c(min(0, min(corr)), max(0, 1.1*max(corr))), xaxs='i', yaxs='i', 
+       xlab='Shift (bp)', ylab='Correlation coefficient', cex.lab=1.5);
+  abline(v=seq(0, max(shift), 50), col='#BBBBBB', lty=2, lwd=.5);
+  polygon(c(0, shift, shift[length(shift)]), c(0, corr, 0), col='#2288FF88', border='gold', lwd=3);
+  box(lwd=2);
+  
+  if (!identical(summits.ind, NA) | length(summits.ind)>0) {
+    summits.ind<-summits.ind[summits.ind>0 & summits.ind<=length(shift)];
+    text(shift[summits.ind], 1.05*corr[summits.ind], label=shift[summits.ind]);
+    segments(shift[summits.ind], corr[summits.ind], shift[summits.ind], 1.02*corr[summits.ind], lwd=2, col='red');
+  }
+}
+
+# plot a simple barplot; arrange labels automatically
+PlotSimplyBars<-function(v, main='', ylab='') {
+  plot.new();
+  mar1<-3;
+  if (is.na(ylab) | ylab[1]=='') mar2<-3 else mar2<-5;
+  if (is.na(main) | main[1]=='') mar3<-0.5 else mar3<-3;
+  par(mar=c(mar1, mar2, mar3, 1)); 
+  
+  xin<-par()$pin[1];
+  yin<-par()$pin[2];
+  
+  xr<-par()$mar[1]/par()$mai[1];
+  
+  # plot name labels
+  cex.names<-1; # default
+  wx<-max(strwidth(names(v), units='inches'));  
+  
+  if ((xin/length(v))<(1.5*wx)) {
+    las<-3;
+    mar1<-min(8, 2+wx*xr);
+    par(mar=c(mar1, mar2, mar3, 1));
+    cex.names<-4/(wx*xr);
+  } else {
+    las<-1;
+    cex.names<-(xin/length(v))/(1.5*wx);
+  }
+
+  cex.main<-xin/strwidth(main);
+  cex.lab<-yin/strwidth(ylab);
+  
+  barplot(v, ylim=c(min(0, 1.1*min(v, na.rm=TRUE)), max(0, 1.1*max(v, na.rm=TRUE))), yaxs='i', names=names(v), main=main, ylab=ylab, las=las, col=rainbow(length(v)),
+          cex.names=min(2, cex.names), cex.lab=min(2.5, cex.lab), cex.main=min(2.5, cex.main));
+  box(lwd=2);
+}
+
+
 Plot3DPie<-function (v, main='', border='grey', height=0.02, explode=0.03, radius=3/4) {
   ver<-as.numeric(R.Version()$minor);
   
@@ -34,10 +142,12 @@ PlotLogBar<-function(v, main='', col='orange', space=0, las=3, xlab='', ylab='Pe
 
 # Plot the base frequncy logo
 PlotBaseLogo<-function(freq, main='', ic.scale=FALSE, xaxis=FALSE) {
+  library(seqLogo);
   plot.new();
   if (is.na(main) | main[1]=='') mar3<-1 else mar3<-4;
   par(mar=c(0, 4, mar3, 1));
   
+  freq<-apply(freq, 2, function(x) x/sum(x));
   seqLogo(freq, ic.scale=ic.scale, xaxis=xaxis);
   title(main=main, cex.main=3);    
 }
@@ -46,7 +156,7 @@ PlotBaseLogo<-function(freq, main='', ic.scale=FALSE, xaxis=FALSE) {
 PlotQualityDens<-function(dens, main='') {
   if (is.na(main) | main[1]=='') mar3<-1 else mar3<-4;
   par(mfrow=c(1,1), mar=c(4, 4, mar3, 1), omi=c(0, 0, 0, 0));
-   
+  #plot(dens); 
   plot(0, type='n', xlab='', ylab='', xlim=c(min(dens$x), max(dens$x)), ylim=c(min(0, min(dens$y)), 1.05*max(dens$y)), xaxs='i', yaxs='i'); 
   polygon(dens, border='gold', col='#888888');
   title(ylab='Density', xlab='Quality score', line=2);
@@ -82,10 +192,10 @@ PlotQualityPerc<-function(qual, main='') {
   max.locs<-which(q[nrow(q), ]==max(q[nrow(q), ]));
   min.loc<-min.locs[which(abs(min.locs-mid)==min(abs(min.locs-mid)))][1];
   max.loc<-max.locs[which(abs(max.locs-mid)==min(abs(max.locs-mid)))][1];
-  text(c(min.loc, max.loc), c(min(q), max(q)), labels=c('0%', '100%'), cex=1.5, pos=c(3, 1));
+  text(c(min.loc, max.loc), c(min(q), max(q)), labels=c('0%', '100%'), cex=1.5, pos=c(3, 2));
   
   # middle line
-  lines(qual[51, ], lwd=3, lty=1, col='#2222FF'); 
+  lines(qual[51, ], lwd=5, lty=1, col='#2222FF'); 
   
   title(main=main, cex.main=3);
   box(lwd=2);
@@ -111,7 +221,7 @@ PlotCenterEnd<-function(cov, ws=21, main='') {
   if (is.na(main) | main[1]=='') mar3<-1 else mar3<-4;
   par(mfrow=c(1,1), mar=c(4, 5, mar3, 1), omi=c(0, 0, 0, 0));
     
-  y<-runmed(colMeans(cov, na.rm=TRUE), min(ws, ncol(cov)));
+  y<-runmed(cov, min(c(ws, length(cov)), na.rm=TRUE));
   plot(0:(length(y)-1), y, type='n', xaxt='n', ylim=c(0, 1.05*max(y)), xlab='', ylab='', xaxs='i', yaxs='i');
   title(xlab='Relative position in targeted regions', ylab='Relative depth', cex.lab=1.5, main=main, cex.main=3);
   abline(v=seq(0, (length(y)-1), round(length(y)-1)/20), col='lightgrey');
@@ -123,30 +233,50 @@ PlotCenterEnd<-function(cov, ws=21, main='') {
 }
 
 # plot density distribution
-PlotDensity<-function(d, main='', xlab='', ylab='', col='#90FF90CC', min.x=0) {
+PlotDensity<-function(d, main='', xlab='', ylab='', xlim=NA, col='#90FF90CC', min.x=0, plot.bar.min=5) {
+  if (class(d)=='density' | (length(d) >= plot.bar.min & length(d)>1 )) { # require a minimum number of data points to plot the density
   if (is.na(main) | main[1]=='') mar3<-1 else mar3<-4;
   if (is.na(xlab) | xlab[1]=='') mar1<-1 else mar1<-4;
-  if (is.na(ylab) | ylab[1]=='') mar2<-1 else mar2<-4;
-  if (is.na(main) | main[1]=='') mar3<-1 else mar3<-4;
+  if (is.na(ylab) | ylab[1]=='') mar2<-1 else mar2<-5;
   par(mfrow=c(1, 1), mar=c(mar1, mar2, mar3, 1), omi=c(0, 0, 0, 0));
   
-  d<-d[d> -Inf & d< Inf & !is.na(d)];
+  if (class(d)!='density') {
+    d<-d[d> -Inf & d< Inf & !is.na(d)];
+    if (length(d)>0) {
+      dens<-density(d);
+    }
+    else { 
+      plot(0, type='n', xlab='', ylab='', axas=FALSE); 
+      box();
+      dens<-NA;
+    }
+  }
+  else dens<-d;
+  print(dens);
+  if (!identical(dens, NA)) { 
+    X<-dens$x;
+    Y<-dens$y;
   
-  if (length(d)>0) {
+    if (identical(NA, xlim)) xlim<-c(max(min.x, min(X)), max(X));
   
-  dens<-density(d);
-  X<-dens$x;
-  Y<-dens$y;
-  
-  plot(0, type='n', xlim=c(max(min.x, min(X)), max(X)), ylim=c(0, 1.05*max(Y)), xlab='', ylab='', xaxs='i', yaxs='i', xaxt='n', yaxt='n');
-  x.tick<-axis(1);
-  abline(v=x.tick, col='lightgrey', lty=2);
-  polygon(c(0, X, 100), c(0, Y, 0), col=col, border='gold', lwd=2);
-  title(xlab=xlab, ylab=ylab, cex.lab=1.5, main=main, cex.main=3);
-  box(lwd=2);
-  } else {
-    plot(0, type='0', xlab='', ylab='', axas=FALSE); 
+    plot(0, type='n', xlim=xlim, ylim=c(0, 1.05*max(Y)), xlab='', ylab='', xaxs='i', yaxs='i', xaxt='n', yaxt='n');
+    x.tick<-axis(1);
+    abline(v=x.tick, col='lightgrey', lty=2);
+    polygon(c(0, X, 100), c(0, Y, 0), col=col, border='gold', lwd=2);
+    title(xlab=xlab, ylab=ylab, cex.lab=1.5, main=main, cex.main=3);
+    box(lwd=2);
+  } else { 
+    plot(0, type='n', xlab='', ylab='', axes=FALSE); 
     box();
+  }
+  }
+  else { # if too few data points, plot bars instead
+    if (is.na(main) | main[1]=='') mar3<-1 else mar3<-4;
+    if (is.na(xlab) | xlab[1]=='') mar2<-1 else mar2<-4;
+    par(mfrow=c(1,1), mar=c(5, mar2, mar3, 1), omi=rep(0, 4));
+    barplot(d, space=0.75, las=3, yaxs='i', ylim=c(min(1.05*min(d), 0), 1.05*max(d)));
+    title(ylab=xlab, cex.lab=1.5, main=main, cex.main=3);
+    box(lwd=2);
   }
 }
 
@@ -164,7 +294,7 @@ PlotStamps<-function(d, type=c('line', 'pie', 'polygon', 'density'), max.len=100
   if (is.null(names(d))) names(d)<-paste('toi', 1:length(d), sep='_');
 
   # use average if too long
-  if (class(d)=='list') {
+  if (class(d)=='list' | class(d)=='CompressedRleList') {
     d<-lapply(d, function(v) {  
       if (length(v) > max.len) {
         ws<-ceiling(length(v)/max.len);
@@ -173,17 +303,18 @@ PlotStamps<-function(d, type=c('line', 'pie', 'polygon', 'density'), max.len=100
         aggregate(v, start=stt, end=end, FUN=mean);
       } else v;
       })
-    max<-max(sapply(d, max));
+    max<-max(sapply(d, function(d) if (length(d)>0) max(d) else NA), na.rm=TRUE);
   } else if (class(d)=='matrix' | class(d)=='data.frame') {
-    max<-max(apply(d, 1, max));
+    max<-max(apply(d, 1, function(d) if (length(d)>0) max(d) else NA), na.rm=TRUE);
   } else {
-    max<-max(d);
+    max<-max(d, na.rm=TRUE);
   }
   
   # plot regions
   for (i in 1:l) {
+
     if (class(d)=='list') {
-      v<-d[[i]];
+      v<-d[[i]]; 
       nm<-names(d)[i];
     } else if (class(d)=='matrix' | class(d)=='data.frame') {
       v=d[i, ];
@@ -196,7 +327,7 @@ PlotStamps<-function(d, type=c('line', 'pie', 'polygon', 'density'), max.len=100
     v<-as.numeric(v);
 
     # plotting ----------------------------------------------------------------------
-    if (length(v)>0) {
+    if (length(v)>1) {
       if (type[1]=='line') {
         plot(0, 0, type='n', ylim=c(0, max), xlim=c(0, length(v)), axes=FALSE);
         lines(v, col=col)
@@ -210,10 +341,10 @@ PlotStamps<-function(d, type=c('line', 'pie', 'polygon', 'density'), max.len=100
         plot(0, 0, type='n', ylim=c(0, 1.05*max(y)), xlim=c(0, max(x)), yaxs='i', axes=FALSE);
         polygon(c(x[1], x, x[length(x)]), c(0, y, 0), col=col);
       } else if (type[1]=='pie') {
-        pie(v, labels=NA, radius=0.9, init.angle=90, clockwise=TRUE, col=col);
-      } else plot(0, type='0', xlab='', ylab='', axas=FALSE); 
+        if (sum(v)>1) pie(v, labels=NA, radius=0.9, init.angle=90, clockwise=TRUE, col=col) else plot(0, type='n', xlab='', ylab='', axes=FALSE);
+      } else plot(0, type='n', xlab='', ylab='', axes=FALSE); 
 
-    } else plot(0, type='0', xlab='', ylab='', axas=FALSE); 
+    } else plot(0, type='n', xlab='', ylab='', axes=FALSE); 
     
     if (!is.na(nm)) title(main=nm, line=-1.25, cex.main=min(3, 10/nc), col.main='#2222FF');    
     box();

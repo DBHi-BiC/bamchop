@@ -27,7 +27,10 @@ PlotLandscape<-function(cov, roi=NA, ws=10, step=10, same.x=TRUE, same.y=TRUE,
   # y-axis limit of each sub-plot
   {if ((class(y.scale)=='numeric'|class(y.scale)=='integer') & y.scale[[1]]>0) ylim<-rep(y.scale, length(XY)) # specified number 
   else if (identical(y.scale[[1]], 'MAX')) ylim<-sapply(XY, function(x) max(x[[2]])) # the highest
-  else if (identical(y.scale[[1]], '99.9%')) ylim<-sapply(XY, function(x) quantile(x[[2]], probs=seq(0, 1, 0.001)[1000])) # 99.9 percentile
+  else if (grep('%$',y.scale[[1]])) {
+	n<-100/(100-as.numeric(sub('%', '', y.scale[[1]])));
+	ylim<-sapply(XY, function(x) quantile(x[[2]], probs=seq(0, 1, length.out=n+1))[n]) # percentile
+  }
   else if (identical(y.scale[[1]], 'LOG')) ylim<-log10(sapply(XY, function(x) max(x[[2]]))) # log10 of the highest
   else ylim<-sapply(XY, function(x) mean(x[[2]])+3*sd(x[[2]]));
    }
@@ -79,7 +82,7 @@ PlotLandscape<-function(cov, roi=NA, ws=10, step=10, same.x=TRUE, same.y=TRUE,
     }
     axis(2, las=2, at=ytick, labels=ylab, cex.axis=2/3);
                   
-    polygon(c(0, x, 0), c(0, y, 0), col=col.fg, border=col.fg);
+    polygon(c(0, x, max(x)), c(0, y, 0), col=col.fg, border=col.fg);
     
     out[[1]]$X[[names(cov)[i]]]<-x;
     out[[1]]$Y[[names(cov)[i]]]<-y;

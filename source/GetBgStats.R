@@ -54,7 +54,8 @@ stat$mapq<-mapq[order(as.numeric(names(mapq)))];
 # Information from CIGAR string
 cigar<-values[['cigar']];
 cigar<-sapply(c('I', 'D', 'S', 'H'), function(c) length(grep(c, cigar)));
-names(cigar)<-c('Insertion', 'Deletion', 'Soft clipping', 'Hard clipping');
+cigar<-c(cigar, stat$counts[1]);
+names(cigar)<-c('Insertion', 'Deletion', 'Soft clipping', 'Hard clipping', 'All other');
 stat$cigar<-cigar[cigar>0];
 
 # position specific base frequecy
@@ -70,7 +71,8 @@ bases$frequency<-freq;
 
 # counts of combinations of first 2 bases, Ns excluded
 di<-table(substr(seq, 1, 2));
-bases$di.base<-di[-grep('N', names(di))];
+if (length(grep('N', names(di)))>0) di<-di[-grep('N', names(di))];
+bases$di.base<-di; 
 
 stat$bases<-bases;
 
